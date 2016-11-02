@@ -41,9 +41,14 @@ exports = module.exports = nunjucks.Loader.extend({
    * @public
    */
   getSource: function (name, callback) {
+    name = name.indexOf('::') === -1 ? '::' + name : name
+    const parts = name.split('::')
+    name = parts[1]
     name = name.replace(/((?!\.+\/)\.(?!njk))/g, '/')
     name = path.extname(name) === '.njk' ? name : `${name}.njk`
-    const viewPath = path.resolve(this.viewsPath, name)
+
+    const viewsPath = this.resolveNamespace(parts[0])
+    const viewPath = path.resolve(viewsPath, name)
     const self = this
 
     fs.readFile(viewPath, function (err, content) {
@@ -57,5 +62,23 @@ exports = module.exports = nunjucks.Loader.extend({
         noCache: self.noCache
       })
     })
+  },
+
+  /**
+   * resolve path for passed namespace
+   *
+   * ::home
+   * App::home
+   * @App::home
+   * Adonis/Addon/Test::home
+   * @Adonis/Addon/Test::home
+   */
+  resolveNamespace: function (namespace) {
+    namespace = namespace.trimLeft('@')
+    if (namespace === '' || namespace === 'App') { // TODO: may be remove 'App' check ?
+      return this.viewsPath
+    }
+    // TODO: make some loading of view path of Addon with namespace or alias ... ?
+    return this.viewsPath
   }
 })
